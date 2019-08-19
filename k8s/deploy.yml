@@ -1,0 +1,143 @@
+kind: ConfigMap
+metadata:
+  name: eventuate-local-cdc-env-properties
+apiVersion: v1
+data:
+    SPRING_DATASOURCE_URL: jdbc:mysql://paascloud-db-mysql:3306/eventuate
+    SPRING_DATASOURCE_USERNAME: root
+    SPRING_DATASOURCE_PASSWORD: root
+    SPRING_DATASOURCE_DRIVER_CLASS_NAME: com.mysql.jdbc.Driver
+    EVENTUATELOCAL_KAFKA_BOOTSTRAP_SERVERS: paascloud-kafka:9092
+    EVENTUATELOCAL_ZOOKEEPER_CONNECTION_STRING: paascloud-provider-zk:2181
+    EVENTUATELOCAL_CDC_DB_USER_NAME: root
+    EVENTUATELOCAL_CDC_DB_PASSWORD: root
+    EVENTUATELOCAL_CDC_READ_OLD_DEBEZIUM_DB_OFFSET_STORAGE_TOPIC: 'true'
+    EVENTUATELOCAL_CDC_READER_NAME: MySqlReader
+    EVENTUATELOCAL_CDC_OFFSET_STORE_KEY: MySqlBinLog
+    EVENTUATELOCAL_CDC_MYSQL_BINLOG_CLIENT_UNIQUE_ID: '1234567890'
+    EVENTUATE_CDC_TYPE: EventuateLocal
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: eventuate-local-java-cdc-sql-service
+#  namespace: zhanghong
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: eventuate-local-java-cdc-sql-service
+  template:
+    metadata:
+      labels:
+        app: eventuate-local-java-cdc-sql-service
+    spec:
+#      nodeSelector:
+#        paascloud_kafka: default
+#      nodeName: okd-node-2     
+      imagePullSecrets:
+      - name: secret-aliyuncs
+      containers:
+      - name: eventuate-local-java-cdc-sql-service
+        image: registry.cn-hangzhou.aliyuncs.com/iotbull/test-eventuate-local-java-new-cdc-mysql-service:0.30.4
+        imagePullPolicy: Always
+#        2222 sys , 8000 debug , 11111 canal , 11112 metrics
+        ports:
+        - containerPort: 8080
+          name: port                
+        env:
+#        - name: canal.id
+#          value: '1'                  
+        envFrom:
+        - configMapRef:
+            name: eventuate-local-cdc-env-properties      
+        securityContext:
+          privileged: true     #挂本地磁盘时给权限         
+   
+                                                                                            
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: eventuate-local-java-cdc-sql-service
+#  namespace: zhanghong
+spec:
+  selector:
+    app: eventuate-local-java-cdc-sql-service
+  ports:
+  - protocol: TCP
+    port: 8080
+    targetPort: 8080
+
+---
+
+
+kind: ConfigMap
+metadata:
+  name: eventuate-local-console-env-properties
+apiVersion: v1
+data:
+    SPRING_DATASOURCE_URL: jdbc:mysql://paascloud-db-mysql:3306/eventuate
+    SPRING_DATASOURCE_USERNAME: root
+    SPRING_DATASOURCE_PASSWORD: root
+    SPRING_DATASOURCE_DRIVER_CLASS_NAME: com.mysql.jdbc.Driver
+    EVENTUATELOCAL_KAFKA_BOOTSTRAP_SERVERS: paascloud-kafka:9092
+    EVENTUATELOCAL_ZOOKEEPER_CONNECTION_STRING: paascloud-provider-zk:2181
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: eventuate-local-console
+#  namespace: zhanghong
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: eventuate-local-console
+  template:
+    metadata:
+      labels:
+        app: eventuate-local-console
+    spec:
+#      nodeSelector:
+#        paascloud_kafka: default
+#      nodeName: okd-node-2     
+      imagePullSecrets:
+      - name: secret-aliyuncs
+      containers:
+      - name: eventuate-local-console
+        image: registry.cn-hangzhou.aliyuncs.com/iotbull/eventuate-local-console:0.30.4
+        imagePullPolicy: Always
+#        2222 sys , 8000 debug , 11111 canal , 11112 metrics
+        ports:
+        - containerPort: 8080
+          name: port                
+        env:
+#        - name: canal.id
+#          value: '1'                  
+        envFrom:
+        - configMapRef:
+            name: eventuate-local-console-env-properties     
+        securityContext:
+          privileged: true     #挂本地磁盘时给权限         
+   
+                                                                                            
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: eventuate-local-console
+#  namespace: zhanghong
+spec:
+  selector:
+    app: eventuate-local-console
+  ports:
+  - protocol: TCP
+    port: 8080
+    targetPort: 8080
+
+
+          
+          

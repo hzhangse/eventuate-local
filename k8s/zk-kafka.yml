@@ -1,0 +1,100 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: paascloud-kafka
+  name: paascloud-kafka
+#  namespace: zhanghong
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 1
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      app: paascloud-kafka
+  template:
+    metadata:
+      labels:
+        app: paascloud-kafka
+    spec:
+      containers:
+        - env:
+            - name: KAFKA_ZOOKEEPER_CONNECT
+              value: 'paascloud-provider-zk:2181'
+            - name: KAFKA_LISTENERS
+              value: 'INSIDE://:9092,OUTSIDE://:9094'
+            - name: KAFKA_INTER_BROKER_LISTENER_NAME
+              value: INSIDE
+            - name: KAFKA_ADVERTISED_LISTENERS
+              value: 'INSIDE://paascloud-kafka:9092,OUTSIDE://:9094'
+            - name: KAFKA_LISTENER_SECURITY_PROTOCOL_MAP
+              value: 'INSIDE:PLAINTEXT,OUTSIDE:PLAINTEXT'
+          image: 'registry.cn-shanghai.aliyuncs.com/zhachaoy/kafka:1.0.0'
+          imagePullPolicy: IfNotPresent
+          name: paascloud-kafka
+          ports:
+            - containerPort: 9092
+              protocol: TCP
+            - containerPort: 9094
+              protocol: TCP
+
+      dnsPolicy: ClusterFirst
+
+      restartPolicy: Always
+      
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: paascloud-kafka
+#  namespace: zhanghong
+spec:
+  ports:
+  - port: 9092
+  selector:
+    app: paascloud-kafka
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: paascloud-provider-zk
+  name: paascloud-provider-zk
+
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 1
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      app: paascloud-provider-zk
+  template:
+    metadata:
+      labels:
+        app: paascloud-provider-zk
+    spec:
+      containers:
+      - name: paascloud-provider-zk
+        imagePullPolicy: Always
+        image: "zookeeper:3.4.14"
+        resources:
+          requests:
+            memory: "2Gi"
+            cpu: "1"
+        ports:
+        - containerPort: 2181
+          name: client
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always    
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: paascloud-provider-zk
+#  namespace: zhanghong
+spec:
+  ports:
+  - port: 2181
+  selector:
+    app: paascloud-provider-zk 
